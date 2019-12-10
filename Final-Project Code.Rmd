@@ -9,4 +9,52 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(rvest)
+library(dplyr)
+library(tidyverse)
+```
 
+```{r}
+url1 <- "https://www.basketball-reference.com/pi/shareit/vYOnK"
+
+NBAraw1 <- url1 %>%
+  read_html() %>%
+  html_nodes(css = "table") %>%
+  html_table(fill = TRUE)
+str(NBAraw1)
+
+url2 <- "https://www.basketball-reference.com/pi/shareit/pJVmT"
+
+NBAraw2 <- url2 %>%
+  read_html() %>%
+  html_nodes(css = "table") %>%
+  html_table(fill = TRUE)
+str(NBAraw2)
+
+```
+```{r}
+NBAdf1 <- NBAraw1[[1]]
+is.data.frame(NBAdf1)
+
+NBAdf1join <-
+  NBAdf1 %>%
+  filter(Rk != "Rk")
+
+NBAdf2 <- 
+  NBAraw2[[1]]
+is.data.frame(NBAdf2)
+
+#Jointbl <- NBAdf2[ -c(1,3:8,10:29) ]
+
+NBAFullstat <-
+  inner_join(NBAdf1join,NBAdf2,by="Player") %>%
+  filter(G >= 58)
+NBAFullstat
+#NBABasketballPerGame <- 
+  #cbind(NBAbballraw[[1]], NBAbballraw[[2]]) %>%
+  #(Name != "Total")
+#NBABasketballPerGame
+
+
+```
