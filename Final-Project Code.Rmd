@@ -40,21 +40,91 @@ is.data.frame(NBAdf1)
 NBAdf1join <-
   NBAdf1 %>%
   filter(Rk != "Rk")
-
+NBAdf1
 NBAdf2 <- 
   NBAraw2[[1]]
+colnames(NBAdf2)[3] <- "TSpct"
+colnames(NBAdf1)[10] <- "FGpct"
+colnames(NBAdf1)[12] <- "ThreePtAtt"
+colnames(NBAdf1)[13] <- "ThreePtpct"
+colnames(NBAdf1)[17] <- "eFGpct"
+NBAdf1join <-
+  NBAdf1 %>%
+  filter(Rk != "Rk")
+NBAdf1
 is.data.frame(NBAdf2)
 
 #Jointbl <- NBAdf2[ -c(1,3:8,10:29) ]
 
 NBAFullstat <-
+
   inner_join(NBAdf1join,NBAdf2,by="Player") %>%
-  filter(G >= 58)
+  
+  mutate(G = as.numeric(G),
+         FG = as.numeric(FG),
+         eFGpct = as.numeric(eFGpct),
+         PTS = as.numeric(PTS),
+         AST = as.numeric(AST),
+         TRB = as.numeric(TRB),
+         BLK = as.numeric(BLK),
+         ThreePtpct = as.numeric(ThreePtpct),
+         
+         ) %>%
+  filter(G >= 58) 
+colnames(NBAFullstat)[31] <- "TS"
 NBAFullstat
+
 #NBABasketballPerGame <- 
   #cbind(NBAbballraw[[1]], NBAbballraw[[2]]) %>%
   #(Name != "Total")
 #NBABasketballPerGame
 
 
+```
+
+```{r}
+Positionpts <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avgPTS = mean(PTS)) %>%
+  arrange(desc(avgPTS))
+Positionast <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avgAST = mean(AST)) %>%
+  arrange(desc(avgAST))
+PositionTRB <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avgTRB = mean(TRB)) %>%
+  arrange(desc(avgTRB))
+PositionBLK <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avgBLK = mean(BLK)) %>%
+  arrange(desc(avgBLK))
+Position3Ppct <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avg3Ppc = mean(ThreePtpct)) %>%
+  arrange(desc(avg3Ppc))
+PositionTable <-
+  left_join(Positionpts, Positionast) %>%
+  left_join(., PositionTRB) %>%
+  left_join(., PositionBLK) %>%
+  left_join(., Position3Ppct) 
+
+NBAFullstat %>%
+  ggplot(aes(x=eFGpct, y=ThreePtpct)) +
+  geom_point(size=2, aes(color=Pos)) +
+  geom_smooth() +
+  theme_bw() #theme_gray, theme_linedraw, theme_classic, and so on. 
+```
+```{r}
+Positionpts %>%
+  ggplot(aes(x = Pos, y = avgPTS)) +
+  geom_bar(stat = "identity")
+NBAFullstat %>%
+  ggplot(aes(x = Pos, y = PTS)) +
+  geom_boxplot()
 ```
