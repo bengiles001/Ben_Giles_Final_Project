@@ -14,6 +14,13 @@ library(rvest)
 library(dplyr)
 library(tidyverse)
 ```
+```{r}
+ThreeyearStats <- read.csv("threeyrnbastats.csv",
+           header = TRUE,
+           sep = ",",
+           stringsAsFactors = FALSE)
+ThreeyearStats
+```
 
 ```{r}
 url1 <- "https://www.basketball-reference.com/pi/shareit/vYOnK"
@@ -47,6 +54,8 @@ colnames(NBAdf2)[3] <- "TSpct"
 colnames(NBAdf1)[10] <- "FGpct"
 colnames(NBAdf1)[12] <- "ThreePtAtt"
 colnames(NBAdf1)[13] <- "ThreePtpct"
+colnames(NBAdf1)[15] <- "TwoPA"
+colnames(NBAdf1)[16] <- "TwoPpct"
 colnames(NBAdf1)[17] <- "eFGpct"
 NBAdf1join <-
   NBAdf1 %>%
@@ -55,7 +64,18 @@ NBAdf1
 is.data.frame(NBAdf2)
 
 #Jointbl <- NBAdf2[ -c(1,3:8,10:29) ]
-
+NBAFullStatNoFilter <-
+  NBAdf1 %>%
+    mutate(G = as.numeric(G),
+         FG = as.numeric(FG),
+         eFGpct = as.numeric(eFGpct),
+         PTS = as.numeric(PTS),
+         AST = as.numeric(AST),
+         TRB = as.numeric(TRB),
+         BLK = as.numeric(BLK),
+         ThreePtpct = as.numeric(ThreePtpct),
+         TwoPpct = as.numeric(TwoPpct),
+         TwoPA = as.numeric(TwoPA))
 NBAFullstat <-
 
   inner_join(NBAdf1join,NBAdf2,by="Player") %>%
@@ -68,6 +88,8 @@ NBAFullstat <-
          TRB = as.numeric(TRB),
          BLK = as.numeric(BLK),
          ThreePtpct = as.numeric(ThreePtpct),
+         TwoPpct = as.numeric(TwoPpct),
+         TwoPA = as.numeric(TwoPA)
          
          ) %>%
   filter(G >= 58) 
@@ -106,13 +128,21 @@ PositionBLK <-
 Position3Ppct <-
   NBAFullstat %>%
   group_by(Pos) %>%
-  summarise(avg3Ppc = mean(ThreePtpct)) %>%
-  arrange(desc(avg3Ppc))
+  summarise(avgThreePpct = mean(ThreePtpct)) %>%
+  arrange(desc(avgThreePpct))
+PositionTwoPpct <-
+  NBAFullstat %>%
+  group_by(Pos) %>%
+  summarise(avgTwoPpct = mean(TwoPpct)) %>%
+  arrange(desc(avgTwoPpct))
+PositionTwoPpct
 PositionTable <-
   left_join(Positionpts, Positionast) %>%
   left_join(., PositionTRB) %>%
   left_join(., PositionBLK) %>%
-  left_join(., Position3Ppct) 
+  left_join(., Position3Ppct) %>%
+  left_join(., PositionTwoPpct)
+PositionTable
 
 NBAFullstat %>%
   ggplot(aes(x=eFGpct, y=ThreePtpct)) +
@@ -124,7 +154,27 @@ NBAFullstat %>%
 Positionpts %>%
   ggplot(aes(x = Pos, y = avgPTS)) +
   geom_bar(stat = "identity")
+
 NBAFullstat %>%
-  ggplot(aes(x = Pos, y = PTS)) +
-  geom_boxplot()
+  ggplot(aes( x = TwoPpct)) +
+  geom_histogram() +
+  facet_wrap( ~ Pos)
+Questiontable <-
+  NBAFullstat %>%
+  filter(Pos == "SF-SG")
+Questiontable
+```
+
+```{r}
+#function for median data in league
+TEAMstatstbl <-
+  NBAFullStatNoFilter%>%
+  group_by(Tm) %>%
+  filter(Tm != "TOT") %>%
+  filter(Tm != "Tm") %>%
+  summarise(total = sum(PTS)) %>%
+  spread(key = Tm, value = total, fill = 0)
+TEAMstatstbl
+
+
 ```
