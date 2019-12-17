@@ -16,7 +16,7 @@ library(tidyverse)
 library(party)
 ```
 ### Guiding Question:
-What relationships are there between Role and statistics in the NBA? 
+What relationships are there between Role and statistics in the NBA? Can you label certain positions by just looking at their statistics?
 
 
 ```{r}
@@ -26,7 +26,7 @@ NBAraw1 <- url1 %>%
   read_html() %>%
   html_nodes(css = "table") %>%
   html_table(fill = TRUE)
-
+str(NBAraw1)
 
 url2 <- "https://www.basketball-reference.com/pi/shareit/pJVmT"
 
@@ -34,7 +34,7 @@ NBAraw2 <- url2 %>%
   read_html() %>%
   html_nodes(css = "table") %>%
   html_table(fill = TRUE)
-
+str(NBAraw2)
 
 ```
 ```{r}
@@ -47,7 +47,8 @@ NBAdf1join <-
 
 NBAdf2 <- 
   NBAraw2[[1]]
-NBAdf2
+# Change variable names with % and numbers in the them 
+
 colnames(NBAdf2)[3] <- "TS"
 colnames(NBAdf1)[10] <- "FGpct"
 colnames(NBAdf1)[12] <- "ThreePtAtt"
@@ -61,20 +62,9 @@ NBAdf1join <-
 
 is.data.frame(NBAdf2)
 
-#Jointbl <- NBAdf2[ -c(1,3:8,10:29) ]
-NBAFullStatNoFilter <-
-  NBAdf1 %>%
-    mutate(G = as.numeric(G),
-         FG = as.numeric(FG),
-         eFGpct = as.numeric(eFGpct),
-         PTS = as.numeric(PTS),
-         AST = as.numeric(AST),
-         TRB = as.numeric(TRB),
-         BLK = as.numeric(BLK),
-         ThreePtpct = as.numeric(ThreePtpct),
-         TwoPpct = as.numeric(TwoPpct),
-         TwoPA = as.numeric(TwoPA))
-NBAFullstat <-
+
+
+NBAFullstat <- #join tables together and make variables numbers. 
 
   inner_join(NBAdf1join,NBAdf2,by="Player") %>%
   
@@ -93,44 +83,30 @@ NBAFullstat <-
          
          ) %>%
   
-  filter(!grepl("-", Pos)) %>% #took out the 5 players who are listed at 2 positions becuase they would 
+  filter(!grepl("-", Pos)) %>% #took out the 5 players who are listed at 2 positions because there is no way fairly assign a position to a player who plays two positions. This would skew averages and make data less consistant so they were taken out.  
   filter(G >= 51) 
 
 
 RelevantStats <-
   NBAFullstat %>%
   select(Pos, PTS, AST, TRB, BLK, ThreePtpct, TwoPpct, TS)
-RelevantStats <- tibble::rowid_to_column(RelevantStats, "ID")
 
-RelevantStats
 
 
 
 ```
+#PositionTable
 
+Shows me the general averages of positiosn in these selects statistics. 
 ```{r}
 PositionTable <-
   RelevantStats%>%
   group_by(Pos) %>%
-  summarise_at(c(2:8), mean, na.rm = TRUE) %>%
+  summarise_at(c(1:7), mean, na.rm = TRUE) %>%
   arrange(desc(PTS))
 PositionTable
 ```
-```{r}
-#function for median data in league
 
-PositionTable %>%
-  ggplot(aes(x = Pos, y = PTS)) +
-  geom_bar(stat = "identity")
-
-NBAFullstat %>% 
-  select(Player, Pos, AST) %>%
-  filter(rank(desc(AST)) <= 11)  %>%
-  arrange(desc(AST))
-NBAFullstat %>%
-  select(Player, Pos, TRB) %>%
-  filter(rank(desc(TRB)) <= 11) 
-```
 ## Finding stats that stand out 
 
 After looking at positional averages I soloed out some of the more extreme differences that were found. The two biggest were Assists(AST) and Rebounds(TRB).
@@ -215,10 +191,11 @@ Whoispointguard <-
 plot(Whoispointguard, type="simple")
 ```
 ```{r}
-Whoispointguard <-
+Whoispointcenter <-
   party::ctree(Pos == "C" ~TS + TRB + AST + ThreePtpct, data=NBAFullstat)
 plot(Whoispointguard, type="simple")
 ```
-
+## Decision Tree's
+These decision trees are for Point Guard(PG) and Center(C) respectively. One reading of the PG tree says that if you have more than 2.5 assists and less than 3.9 rebounds you have an 80% of being a PG. A reading from the C tree shows that if you have greater than 7.8 rebounds, and your assists are less than or equal too 3.9 there is an 83 percent chance you are a Center.
 ## General Findings 
-My research question was very broad as I just wanted to find interesting connections between statistics and position in the NBA. In the end I found that two roles had more extreme differences in the statistics I looked at. These two roles were Center(C) and Point Guard(PG). Center’s are particularly bad at AST at and 3-point percentage. Where the excel in getting rebounds and having a very consistently high avg Trues shooting percentage. Point Guards excel in getting Assist but have abnormally low amounts of rebound compared to the rest of the league. The rest of the stats I looked at for both roles were average. Using this information, I composed two decision trees with statistics that I found were significant in finding whether a player was a Point Guard or a Center 
+I was able to make some reasonably successful decision trees on how to find out if a player is a PG or C this ties into my research question of could you tell a position by just stats. As for looking into statistics per position in the end I found that two roles had more extreme differences in the statistics I looked at. These two roles were Center(C) and Point Guard(PG). Center’s are particularly bad at AST at and 3-point percentage. Where the excel in getting rebounds and having a very consistently high avg Trues shooting percentage. Point Guards excel in getting Assist but have abnormally low amounts of rebound compared to the rest of the league. The rest of the stats I looked at for both roles were average. Using this information, I composed two decision trees with statistics that I found were significant in finding whether a player was a Point Guard or a Center
