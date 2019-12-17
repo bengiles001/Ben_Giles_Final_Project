@@ -15,13 +15,9 @@ library(dplyr)
 library(tidyverse)
 library(party)
 ```
-```{r}
-ThreeyearStats <- read.csv("threeyrnbastats.csv",
-           header = TRUE,
-           sep = ",",
-           stringsAsFactors = FALSE)
-ThreeyearStats
-```
+### Guiding Question:
+What relationships are there between Role and statistics in the NBA? 
+
 
 ```{r}
 url1 <- "https://www.basketball-reference.com/pi/shareit/vYOnK"
@@ -30,7 +26,7 @@ NBAraw1 <- url1 %>%
   read_html() %>%
   html_nodes(css = "table") %>%
   html_table(fill = TRUE)
-str(NBAraw1)
+
 
 url2 <- "https://www.basketball-reference.com/pi/shareit/pJVmT"
 
@@ -38,7 +34,7 @@ NBAraw2 <- url2 %>%
   read_html() %>%
   html_nodes(css = "table") %>%
   html_table(fill = TRUE)
-str(NBAraw2)
+
 
 ```
 ```{r}
@@ -90,6 +86,7 @@ NBAFullstat <-
          TRB = as.numeric(TRB),
          BLK = as.numeric(BLK),
          ThreePtpct = as.numeric(ThreePtpct),
+         ThreePtAtt = as.numeric(ThreePtAtt),
          TwoPpct = as.numeric(TwoPpct),
          TwoPA = as.numeric(TwoPA),
          TS = as.numeric(TS)
@@ -99,78 +96,86 @@ NBAFullstat <-
   filter(!grepl("-", Pos)) %>% #took out the 5 players who are listed at 2 positions becuase they would 
   filter(G >= 51) 
 
-NBAFullstat
+
 RelevantStats <-
   NBAFullstat %>%
-  select(Pos, PTS, AST, TRB, BLK, ThreePtpct, TwoPpct)
+  select(Pos, PTS, AST, TRB, BLK, ThreePtpct, TwoPpct, TS)
 RelevantStats <- tibble::rowid_to_column(RelevantStats, "ID")
+
 RelevantStats
 
-#NBABasketballPerGame <- 
-  #cbind(NBAbballraw[[1]], NBAbballraw[[2]]) %>%
-  #(Name != "Total")
-#NBABasketballPerGame
 
 
 ```
 
 ```{r}
-Positionpts <-
-  NBAFullstat %>%
+PositionTable <-
+  RelevantStats%>%
   group_by(Pos) %>%
-  
-  spread(key = Pos, value =PTS) %>%
-  select(C, PF, PG, SF, SG)
-Positionpts
-Positionpts %>%
-  ggplot(aes(x = Pos,na.rm = TRUE)) +
-  geom_density()
-Positionpts %>%
-  filter_all(all_vars(. > 1))
+  summarise_at(c(2:8), mean, na.rm = TRUE) %>%
+  arrange(desc(PTS))
+PositionTable
+```
+```{r}
+#function for median data in league
 
-Positionpts
-Positionast <-
-  NBAFullstat %>%
-  group_by(Pos) %>%
-  summarise(avgAST = mean(AST)) %>%
-  spread(key = Pos, value = avgAST, fill = 0)
+PositionTable %>%
+  ggplot(aes(x = Pos, y = PTS)) +
+  geom_bar(stat = "identity")
 
-PositionTRB <-
-  NBAFullstat %>%
-  group_by(Pos) %>%
-  summarise(avgTRB = mean(TRB)) %>%
-  spread(key = Pos, value = avgTRB, fill = 0)
-PositionTRB
-PositionBLK <-
-  NBAFullstat %>%
-  group_by(Pos) %>%
-  summarise(avgBLK = mean(BLK)) %>%
-  spread(key = Pos, value = avgBLK, fill = 0)
-Position3Ppct <-
-  NBAFullstat %>%
-  group_by(Pos) %>%
-  summarise(avgThreePpct = mean(ThreePtpct)) %>%
-  arrange(desc(avgThreePpct))
-PositionTwoPpct <-
-  NBAFullstat %>%
-  group_by(Pos) %>%
-  summarise(avgTwoPpct = mean(TwoPpct)) %>%
-  spread(key = Pos, value = avgTwoPpct, fill = 0)
-
-PositionWideTable <-
-  Positionpts %>%
-  #left_join(Positionpts, Positionast, by) %>%
-  #left_join(., PositionTRB) %>%
-  #left_join(., PositionBLK) %>%
-  #left_join(., Position3Ppct) %>%
-  #left_join(., PositionTwoPpct)
-PositionWideTable
-
+NBAFullstat %>% 
+  select(Player, Pos, AST) %>%
+  filter(rank(desc(AST)) <= 11)  %>%
+  arrange(desc(AST))
 NBAFullstat %>%
-  ggplot(aes(x=eFGpct, y=ThreePtpct)) +
+  select(Player, Pos, TRB) %>%
+  filter(rank(desc(TRB)) <= 11) 
+```
+## Finding stats that stand out 
+
+After looking at positional averages I soloed out some of the more extreme differences that were found. The two biggest were Assists(AST) and Rebounds(TRB).
+
+```{R}
+NBAFullstat %>%
+  ggplot(aes(y = TRB, x = Pos)) + 
+  geom_boxplot(aes(color = Pos, fill = Pos), 
+               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
+  xlab("Position") + 
+  ylab("TRB Per Game") + 
+  theme(legend.position = "top") +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+```{R}
+NBAFullstat %>%
+  ggplot(aes(y = AST, x = Pos)) + 
+  geom_boxplot(aes(color = Pos, fill = Pos), 
+               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
+  xlab("Position") + 
+  ylab("Assists Per Game") + 
+  theme(legend.position = "top") +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+```{r}
+NBAFullstat %>%
+  ggplot(aes(y = PTS, x = Pos)) + 
+  geom_boxplot(aes(color = Pos, fill = Pos), 
+               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
+  xlab("Position") + 
+  ylab("PTS Per Game") + 
+  theme(legend.position = "top") +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+```
+## Finding shooting trends
+
+
+```{r}
+NBAFullstat %>%
+  ggplot(aes(x=TS, y=ThreePtAtt)) +
   geom_line(size=2, aes(color=Pos)) +
   facet_wrap(~ Pos) +
-  theme_bw() #theme_gray, theme_linedraw, theme_classic, and so on. 
+  theme_bw() +
+  stat_smooth()#theme_gray, theme_linedraw, theme_classic, and so on. 
 ```
 ```{r}
 NBAFullstat %>%
@@ -193,60 +198,33 @@ NBAFullstat %>%
   ggplot(aes( x = ThreePtpct)) +
   geom_histogram() +
   facet_wrap( ~ Pos)
+NBAFullstat %>%
+  ggplot( aes(x = ThreePtpct) ) + 
+  geom_density(aes(color = Pos, fill = Pos), alpha = 0.75, adjust = 2) + 
+  facet_wrap( ~ Pos, nrow = 1 ) +
+  xlab("ThreePtpct") + 
+  ylab( "Count") + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 ```
 
+
 ```{r}
-#function for median data in league
-TEAMstatstbl <-
-  NBAFullStatNoFilter%>%
-  group_by(Tm) %>%
-  filter(Tm != "TOT") %>%
-  filter(Tm != "Tm") %>%
-  summarise(total = sum(PTS)) %>%
-  spread(key = Tm, value = total, fill = 0)
-TEAMstatstbl
-PositionWidetbl <-
-  NBAFullstat%>%
-  group_by(Pos) %>%
-  summarise(total = mean(PTS)) %>%
-  spread(key = Pos, value = total, fill = 0, convert = TRUE)
-PositionWidetbl
-
-PositionTable <-
-  RelevantStats%>%
-  group_by(Pos) %>%
-  summarise_at(c(2:6), mean, na.rm = TRUE) %>%
-  arrange(desc(PTS))
-PositionTable
-PositionTable %>%
-  ggplot(aes(x = Pos, y = PTS)) +
-  geom_bar(stat = "identity")
-
-NBAFullstat %>% 
-  select(Player, Pos, AST) %>%
-  filter(rank(desc(AST)) <= 11)  %>%
-  arrange(desc(AST))
-NBAFullstat %>%
-  select(Player, Pos, TRB) %>%
-  filter(rank(desc(TRB)) <= 11) 
-
-NBAFullstat %>%
-  ggplot(aes(y = AST, x = Pos)) + 
-  geom_boxplot(aes(color = Pos, fill = Pos), 
-               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
-  xlab("Position") + 
-  ylab("Assists Per Game") + 
-  theme(legend.position = "top") +  
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 NBAFullstat %>%
   ggplot(aes( y = TS , x = PTS)) +
   stat_smooth() +
   facet_wrap(~ Pos)
 ```
+##Using what I have learned. 
 
+What I have learned so far is that there are two roles in the nba that are most distiguishable purely by stats and that would be PG and C. Both of these roles have unique statistical metrics in lows and highs throughout the board. From looking at my data above I chose variables to use in decicion trees that would distinguish whether a player was one of these two positions. Point Guards(PG) have very high average Assists per game, the highest PTS per game and the lowest TRB per game. Where as Centers(C) have the lowest AST per game but a very high avg true shoting percentage(TS) and Total Rebounds(TRB) per game.
 ```{r}
 Whoispointguard <-
   party::ctree(Pos == "PG" ~AST + PTS + TRB, data=NBAFullstat)
+plot(Whoispointguard, type="simple")
+```
+```{r}
+Whoispointguard <-
+  party::ctree(Pos == "C" ~TS + TRB + AST, data=NBAFullstat)
 plot(Whoispointguard, type="simple")
 ```
