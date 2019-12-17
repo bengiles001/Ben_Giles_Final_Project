@@ -47,10 +47,11 @@ is.data.frame(NBAdf1)
 NBAdf1join <-
   NBAdf1 %>%
   filter(Rk != "Rk")
-NBAdf1
+
 NBAdf2 <- 
   NBAraw2[[1]]
-colnames(NBAdf2)[3] <- "TSpct"
+NBAdf2
+colnames(NBAdf2)[3] <- "TS"
 colnames(NBAdf1)[10] <- "FGpct"
 colnames(NBAdf1)[12] <- "ThreePtAtt"
 colnames(NBAdf1)[13] <- "ThreePtpct"
@@ -60,7 +61,7 @@ colnames(NBAdf1)[17] <- "eFGpct"
 NBAdf1join <-
   NBAdf1 %>%
   filter(Rk != "Rk")
-NBAdf1
+
 is.data.frame(NBAdf2)
 
 #Jointbl <- NBAdf2[ -c(1,3:8,10:29) ]
@@ -89,12 +90,20 @@ NBAFullstat <-
          BLK = as.numeric(BLK),
          ThreePtpct = as.numeric(ThreePtpct),
          TwoPpct = as.numeric(TwoPpct),
-         TwoPA = as.numeric(TwoPA)
+         TwoPA = as.numeric(TwoPA),
+         TS = as.numeric(TS)
          
          ) %>%
-  filter(G >= 58) 
-colnames(NBAFullstat)[31] <- "TS"
+  
+  filter(!grepl("-", Pos)) %>% #took out the 5 players who are listed at 2 positions becuase they would 
+  filter(G >= 51) 
+
 NBAFullstat
+RelevantStats <-
+  NBAFullstat %>%
+  select(Pos, PTS, AST, TRB, BLK, ThreePtpct, TwoPpct)
+RelevantStats <- tibble::rowid_to_column(RelevantStats, "ID")
+RelevantStats
 
 #NBABasketballPerGame <- 
   #cbind(NBAbballraw[[1]], NBAbballraw[[2]]) %>%
@@ -108,23 +117,34 @@ NBAFullstat
 Positionpts <-
   NBAFullstat %>%
   group_by(Pos) %>%
-  summarise(avgPTS = mean(PTS)) %>%
-  arrange(desc(avgPTS))
+  
+  spread(key = Pos, value =PTS) %>%
+  select(C, PF, PG, SF, SG)
+
+Positionpts %>%
+  ggplot(aes(x = Pos,na.rm = TRUE)) +
+  geom_density()
+Positionpts %>%
+  filter_all(all_vars(. > 1))
+
+Positionpts
 Positionast <-
   NBAFullstat %>%
   group_by(Pos) %>%
   summarise(avgAST = mean(AST)) %>%
-  arrange(desc(avgAST))
+  spread(key = Pos, value = avgAST, fill = 0)
+
 PositionTRB <-
   NBAFullstat %>%
   group_by(Pos) %>%
   summarise(avgTRB = mean(TRB)) %>%
-  arrange(desc(avgTRB))
+  spread(key = Pos, value = avgTRB, fill = 0)
+PositionTRB
 PositionBLK <-
   NBAFullstat %>%
   group_by(Pos) %>%
   summarise(avgBLK = mean(BLK)) %>%
-  arrange(desc(avgBLK))
+  spread(key = Pos, value = avgBLK, fill = 0)
 Position3Ppct <-
   NBAFullstat %>%
   group_by(Pos) %>%
@@ -134,35 +154,45 @@ PositionTwoPpct <-
   NBAFullstat %>%
   group_by(Pos) %>%
   summarise(avgTwoPpct = mean(TwoPpct)) %>%
-  arrange(desc(avgTwoPpct))
-PositionTwoPpct
-PositionTable <-
-  left_join(Positionpts, Positionast) %>%
-  left_join(., PositionTRB) %>%
-  left_join(., PositionBLK) %>%
-  left_join(., Position3Ppct) %>%
-  left_join(., PositionTwoPpct)
-PositionTable
+  spread(key = Pos, value = avgTwoPpct, fill = 0)
+
+PositionWideTable <-
+  Positionpts %>%
+  #left_join(Positionpts, Positionast, by) %>%
+  #left_join(., PositionTRB) %>%
+  #left_join(., PositionBLK) %>%
+  #left_join(., Position3Ppct) %>%
+  #left_join(., PositionTwoPpct)
+PositionWideTable
 
 NBAFullstat %>%
   ggplot(aes(x=eFGpct, y=ThreePtpct)) +
-  geom_point(size=2, aes(color=Pos)) +
+  geom_line(size=2, aes(color=Pos)) +
+  facet_wrap(~ Pos) +
+  theme_bw() #theme_gray, theme_linedraw, theme_classic, and so on. 
+```
+```{r}
+NBAFullstat %>%
+  ggplot(aes(x=ThreePtAtt, y=TS)) +
+  geom_line(size=2, aes(color=Pos)) +
+  facet_wrap(~ Pos) +
   geom_smooth() +
   theme_bw() #theme_gray, theme_linedraw, theme_classic, and so on. 
 ```
 ```{r}
-Positionpts %>%
-  ggplot(aes(x = Pos, y = avgPTS)) +
+PositionTable %>%
+  ggplot(aes(x = Pos, y = TRB)) +
   geom_bar(stat = "identity")
 
 NBAFullstat %>%
   ggplot(aes( x = TwoPpct)) +
   geom_histogram() +
   facet_wrap( ~ Pos)
-Questiontable <-
-  NBAFullstat %>%
-  filter(Pos == "SF-SG")
-Questiontable
+NBAFullstat %>%
+  ggplot(aes( x = ThreePtpct)) +
+  geom_histogram() +
+  facet_wrap( ~ Pos)
+
 ```
 
 ```{r}
@@ -175,6 +205,40 @@ TEAMstatstbl <-
   summarise(total = sum(PTS)) %>%
   spread(key = Tm, value = total, fill = 0)
 TEAMstatstbl
+PositionWidetbl <-
+  NBAFullstat%>%
+  group_by(Pos) %>%
+  summarise(total = mean(PTS)) %>%
+  spread(key = Pos, value = total, fill = 0, convert = TRUE)
+PositionWidetbl
 
+PositionTable <-
+  RelevantStats%>%
+  group_by(Pos) %>%
+  summarise_at(c(2:6), mean, na.rm = TRUE) %>%
+  arrange(desc(PTS))
+PositionTable
+PositionTable %>%
+  ggplot(aes(x = Pos, y = PTS)) +
+  geom_bar(stat = "identity")
 
+NBAFullstat %>% 
+  select(Player, Pos, AST) %>%
+  filter(rank(desc(AST)) <= 11)  %>%
+  arrange(desc(AST))
+NBAFullstat %>%
+  select(Player, Pos, TRB) %>%
+  filter(rank(desc(TRB)) <= 11) 
+
+NBAFullstat %>%
+  ggplot(aes(y = AST, x = Pos)) + 
+  geom_boxplot(aes(color = Pos, fill = Pos), 
+               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
+  xlab("Position") + 
+  ylab("Assists Per Game") + 
+  theme(legend.position = "top") +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+NBAFullstat %>%
+  ggplot(aes( y = TS , x = PTS)) +
+  stat_smooth()
 ```
