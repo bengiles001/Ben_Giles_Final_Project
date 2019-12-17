@@ -144,6 +144,15 @@ NBAFullstat %>%
   ylab("TRB Per Game") + 
   theme(legend.position = "top") +  
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+NBAFullstat %>%
+  ggplot(aes(y = TS, x = Pos)) + 
+  geom_boxplot(aes(color = Pos, fill = Pos), 
+               alpha = 0.25, outlier.size = 2, outlier.colour = "gray") + 
+  xlab("Position") + 
+  ylab("True Shooting Pct") + 
+  theme(legend.position = "top") +  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 ```{R}
 NBAFullstat %>%
@@ -166,65 +175,50 @@ NBAFullstat %>%
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 ```
-## Finding shooting trends
-
 
 ```{r}
-NBAFullstat %>%
-  ggplot(aes(x=TS, y=ThreePtAtt)) +
-  geom_line(size=2, aes(color=Pos)) +
-  facet_wrap(~ Pos) +
-  theme_bw() +
-  stat_smooth()#theme_gray, theme_linedraw, theme_classic, and so on. 
-```
-```{r}
-NBAFullstat %>%
-  ggplot(aes(x=ThreePtpct, y=TS)) +
-  geom_line(size=2, aes(color=Pos)) +
-  facet_wrap(~ Pos) +
-  geom_smooth() +
-  theme_bw() #theme_gray, theme_linedraw, theme_classic, and so on. 
-```
-```{r}
-PositionTable %>%
-  ggplot(aes(x = Pos, y = TRB)) +
-  geom_bar(stat = "identity")
 
-NBAFullstat %>%
-  ggplot(aes( x = TwoPpct)) +
-  geom_histogram() +
-  facet_wrap( ~ Pos)
-NBAFullstat %>%
-  ggplot(aes( x = ThreePtpct)) +
-  geom_histogram() +
-  facet_wrap( ~ Pos)
-NBAFullstat %>%
-  ggplot( aes(x = ThreePtpct) ) + 
-  geom_density(aes(color = Pos, fill = Pos), alpha = 0.75, adjust = 2) + 
-  facet_wrap( ~ Pos, nrow = 1 ) +
-  xlab("ThreePtpct") + 
-  ylab( "Count") + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+Rebounds <- 
+  NBAFullstat %>%
+    ggplot(aes( x = TRB)) +
+    geom_histogram(color = "darkblue", fill= "lightblue") +
+    facet_wrap( ~ Pos) 
+Rebounds
+Assists <- 
+  NBAFullstat %>%
+    ggplot(aes( x = AST)) +
+    geom_histogram(color = "darkred", fill= "lightgreen") +
+    facet_wrap( ~ Pos) 
+Assists
+
 
 ```
 
+# Centers TS:
+
+While centeres TS% doesnt have the highest peak they are consistant throughout all scoring totals making their avg TS% very high. 
 
 ```{r}
 NBAFullstat %>%
-  ggplot(aes( y = TS , x = PTS)) +
+  ggplot(aes( y = TS , x = PTS, color = Pos)) +
   stat_smooth() +
+  geom_point(alpha = .4) +
   facet_wrap(~ Pos)
 ```
 ##Using what I have learned. 
 
-What I have learned so far is that there are two roles in the nba that are most distiguishable purely by stats and that would be PG and C. Both of these roles have unique statistical metrics in lows and highs throughout the board. From looking at my data above I chose variables to use in decicion trees that would distinguish whether a player was one of these two positions. Point Guards(PG) have very high average Assists per game, the highest PTS per game and the lowest TRB per game. Where as Centers(C) have the lowest AST per game but a very high avg true shoting percentage(TS) and Total Rebounds(TRB) per game.
+What I have learned so far is that there are two roles in the NBA that are most distinguishable purely by stats and that would be PG and C. Both roles have unique statistical metrics in lows and highs throughout the board. From looking at my data above I chose variables to use in decision trees that would distinguish whether a player was one of these two positions. Point Guards(PG) have very high average Assists per game, the highest PTS per game and the lowest TRB per game. Whereas Centers(C) have the lowest AST and Three Point Percentage(ThreePTpct) per game but a very high avg true Shooting Percentage(TS) and Total Rebounds(TRB) per game.
 ```{r}
 Whoispointguard <-
-  party::ctree(Pos == "PG" ~AST + PTS + TRB, data=NBAFullstat)
+  party::ctree(Pos == "PG" ~AST + ThreePtAtt + TRB, data=NBAFullstat)
 plot(Whoispointguard, type="simple")
 ```
 ```{r}
 Whoispointguard <-
-  party::ctree(Pos == "C" ~TS + TRB + AST, data=NBAFullstat)
+  party::ctree(Pos == "C" ~TS + TRB + AST + ThreePtpct, data=NBAFullstat)
 plot(Whoispointguard, type="simple")
 ```
+
+## General Findings 
+My research question was very broad as I just wanted to find interesting connections between statistics and position in the NBA. In the end I found that two roles had more extreme differences in the statistics I looked at. These two roles were Center(C) and Point Guard(PG). Center’s are particularly bad at AST at and 3-point percentage. Where the excel in getting rebounds and having a very consistently high avg Trues shooting percentage. Point Guards excel in getting Assist but have abnormally low amounts of rebound compared to the rest of the league. The rest of the stats I looked at for both roles were average. Using this information, I composed two decision trees with statistics that I found were significant in finding whether a player was a Point Guard or a Center 
